@@ -1,6 +1,7 @@
 # __Lua 学习笔记 v1.0__
 
 通过__《Programming in Lua》__和**《Lua程序设计》**以及网上关于Lua的相关资料，进行学习整理，总结出这一份学习笔记。为后面的初学者提供参考。
+>本资料针对的是Lua5.1版本，5.2版本以后语法和库发生了显著变化，需要额外引起注意。
 ## <a name='TOC'>目录表</a>
   1. [简介](#profile)
   1. [语法](#grammar)
@@ -37,6 +38,7 @@ Lua5.2版本编译后的库文件大小约为240K左右，因此这对于很多�
 6. **免费开源**   
 MIT Licence可以让Lua被免费的用于各种商业程序中。
 
+**[[⬆]](#TOC)**
 ## <a name='grammar'>语法</a>
 ### 注释
 写一个程序，总是少不了注释的。  
@@ -126,7 +128,10 @@ Lua语法是非常简单的，关键字也不多，在这里需要注意：**关
 **在Lua中变量是大小写敏感的**。  
 >变量名可以由任意字母、数字和下划线构成，但是不能以数字开头。在Lua中还有一个特殊的规则，即以下划线(__)开头，后面紧随多个大写字母(_VERSION)，这些变量一般被Lua保留并用于特殊用途，因此我们在声明变量时需要尽量避免这样的声明方式，以免给后期的维护带来不必要的麻烦。
 
+### 全局变量_G
+在Lua脚本中，Lua将所有的全局变量保存在一个常规的table中，这个table被称为全局环境，并且将这个table保存在一个全局变量_G中，也就是说在脚本中可以用_G获取这个全局table，并且有_G._G == _G，在默认情况，Lua在全局环境_G中添加了标准库比如math、函数比如pairs等。
 
+**[[⬆]](#TOC)**
 ## <a name='control_statement'>控制语句</a>
 在Lua中，语句之间可以用分号"；"隔开，也可以用空白隔开。一般来说，如果多个语句写在同一行的话，建议总是用分号隔开。  
 Lua 有好几种程序控制语句，如：
@@ -148,6 +153,7 @@ Lua 有好几种程序控制语句，如：
 
 使用break可以用来中止一个循环。
 
+**[[⬆]](#TOC)**
 ## <a name='rvalue'>赋值语句</a>
 赋值语句在Lua被强化了。它可以同时给多个变量赋值。  
 例如：
@@ -161,6 +167,7 @@ Lua 有好几种程序控制语句，如：
 这里面需要注意的是，不能这样的赋值 如，`local a,b,c = 1`. 这种形式在Lua中被解析成`local a,b,c = 1, nil, nil`。
 并不是C语言中的对所有变量都赋值为1。
 
+**[[⬆]](#TOC)**
 ## <a name='biaodashi'>表达式</a>
 
 ### 数值运算
@@ -215,6 +222,7 @@ a or b：如果 a 为true，则返回a；否则返回b
     ^
 >和C语言一样，括号可以改变优先级。
 
+**[[⬆]](#TOC)**
 ## <a name='functions'>函数</a>
 ### 基础函数
 函数，在Lua中，函数的定义也很简单。典型的定义如下：  
@@ -265,6 +273,34 @@ Lua中的函数是带有词法定界（lexical scoping）的第一类值（first
 变量，这种特征我们称作词法定界。  
   
 **闭包**  
+函数闭包: 一个函数和它所使用的所有upvalue构成了一个函数闭包。
+
+看下面这个例子：
+
+    -- 生成函数, 返回一个显示n次c字符的closure
+    function rep_char(c, n)
+      -- 特别注意这个 local 否则fun就是global, 后面的递归就错了.
+      local function fun()
+	    	if n > 0 then
+		    	 print (c);
+		    	 -- 递归显示
+		    	 n = n-1;
+		    	 fun();
+    		end
+      end
+      return fun;
+    end
+    
+    
+    -- 生成两个closure
+    f1 = rep_char("A", 3);
+    f2 = rep_char("B", 5);
+    
+    
+    -- 调用
+    f1();
+    f2();
+
 
 **尾调函数**  
 在Lua中支持这样一种函数调用的优化，即“尾调用消除”。我们可以将这种函数调用方式视为goto语句，如：
@@ -325,6 +361,8 @@ Table的定义很简单，它的主要特征是用"{"和"}"来括起一系列数
 第三，如果不写索引，则索引就会被认为是数字，并按顺序自动从1往后编；  
 
 表类型的构造是如此的方便，以致于常常被人用来代替配置文件。是的，不用怀疑，它比ini文件要漂亮，并且强大的多。
+
+**[[⬆]](#TOC)**
 ## <a name='metatables_metamethods'>元表和元方法</a>
 ### 元表
 #### 什么是元表
@@ -363,6 +401,250 @@ Metatable定义的操作有：
 > setmetatable和getmetatable是唯一一组操作table类型的Metatable的方法.
 
 
+Lua的语法非常灵活, 使用他的metatable及metamethod可以模拟出很多语言的特性. 
+
+**[[⬆]](#TOC)**
 ## <a name='object_oriented'>面向对象</a>
+Lua中，面向对向是用元表这种机制来实现的。元表是个很“道家”的机制，很深遂，很强大，里面有一些基本概念比较难理解透彻。不过，只有完全理解了元表，才能对Lua的面向对象使用自如，才能在写Lua代码的高级语法时游刃有余。
+
+首先，一般来说，一个表和它的元表是不同的个体（不属于同一个表），在创建新的table时，不会自动创建元表。
+但是，任何表都可以有元表（这种能力是存在的）。
+
+    e.g.
+    t = {}
+    print(getmetatable(t))   --> nil
+    t1 = {}
+    setmetatable(t, t1)
+    assert(getmetatable(t) == t1)
+
+setmetatable( 表1， 表2) 将表2挂接为表1的元表，并且返回经过挂接后的表1。
+
+元表中的`__metatable`字段，用于隐藏和保护元表。当一个表与一个赋值了__metatable的元表进行挂接时，用getmetatable操作这个表，就会返回`__metatable`这个字段的值，而不是元表！用setmetatable操作这个表（即给这个表赋予新的元表），那么就会引发一个错误。
+
+元表中的`__index`元方法，是一个非常强力的元方法，它为回溯查询（读取）提供了支持。而面向对象的实现基于回溯查找。
+当访问一个table中不存在的字段时，得到的结果为nil。这是对的，但并非完全正确。实际上，如果这个表有元表的话，这种访问会促使Lua去查找元表中的`__index`元方法。如果没有这个元方法，那么访问结果就为nil。否则，就由这个元方法来提供最终的结果。
+
+`__index`可以被赋值为一个函数，也可以是一个表。是函数的时候，就调用这个函数，传入参数（参数是什么后面再说），并返回若干值。是表的时候，就以相同的方式来重新访问这个表。（是表的时候，`__index`就相当于元字段了，概念上还是分清楚比较好，虽然在Lua里面一切都是值）
+
+对于没有元表的表，访问一个不存在的字段，就直接返回一个nil了。
+
+`__newindex`是对应`__index`的方法，它的功能是“更新（写）”，两者是互补的。这里不细讲`__newindex`，但是过程很相似，灵活使用两个元方法会产生很多强大的效果。
+
+从继承特性角度来讲，初步的效果使用`__index`就可以实现了。
+
+### 面向对象的实现
+Lua应该说，是一种原型语言。原型是一种常规的对象，当其他对象（类的实例）遇到一个未知的操作时，原型会去查找这个原型。在这种语言中要表示一个类，只需创建一个专用作其他对象的原型。实际上，类和原型都是一种组织对象间共享行为的方式。
+
+下面是一中类的创建和对象构造的例子。
+
+    --账户基类：Account
+    Account = {balance = 100.00} --有一个blance属性
+    
+    ---模拟Account实例化和继承思想所需的方法new()
+    function Account:new(o)
+	    o = o or { }
+	    setmetatable(o,self)
+	    self.__index = self
+	    return o
+    end
+    
+    --Account类的方法deposit（存款）
+    function Account:deposit( v )
+   		self.balance = self.balance + v
+    end
+    
+    --Account类的方法deposit（取款）
+    function Account:withdraw( v )
+    	if v > self.balance then error "no enph money!"
+    	end
+    	self.balance = self.balance - v
+    end
+    ----------------------------------------------------------------------------------------
+    
+    --派生子类
+    spacialAccount = Account:new{limit = 1000.00,rate = 0.100}
+    
+    --子类的新方法
+    function spacialAccount:setrate( v )
+    	self.rate = v;
+    end
+    
+    --实例化子类，得到对象s
+    s = spacialAccount:new()
+    
+    --对象调用方法
+    s:setrate(0.300)
+    
+    print(s.balance)
+    print(s.limit)
+    print(s.rate)
+
+子类继承父类，和实例化类产生新对象都用new（）方法模拟实现，实现形式一样，但概念是不一样的。
+
+不过在实际工程中，我们并不用上面的方式来构造类和对象。一般我们推荐下面这种方式。
+
+	-- class.lua
+    module(..., package.seeall)
+    function class(super)
+    	local mt = {
+    	__call = function (_c, ...)
+    		local function ct(_c, _o, ...)
+    			if _c.__super then ct(_c.__super, _o, ...) end
+    			if _c.__ctor then _c.__ctor(_o, ...) end
+    			return _o
+    		end
+    		local _o = ct(_c, {}, ...)
+    		return setmetatable(_o, _c)
+    	end
+    	}
+    	mt.__index = super or mt
+    	return setmetatable({__super=super}, mt)
+    end
+
+
+测试用例：
+
+	--test.lua
+    local class = require "class".class
+    
+    -- define a class Type A
+    A = class()
+    
+    -- set constructor method of class A 
+    function A:__ctor(s)
+    	self.i = 1
+    	self.j = 2
+    	print("A ctor", s)
+    end
+    
+    -- instance of class A
+    
+    a = A('a')
+    print(a.i, a.j)  
+    
+    -- output --
+    -- A ctor a
+    -- 1  2
+    
+    ----------------------------------------
+    -- define class B inherited class A
+    B = class(A)
+    
+    -- set constructor method of class B
+    function B:__ctor(s)
+    	self.z = 3
+    	print("B ctor", s)
+    end
+    
+    -- instance of class B
+    
+    b = B('b')
+    print(b.i, b.j, b.z)
+    
+    -- output --
+    -- A ctor b
+    -- B ctor b
+    -- 1  2  3
+
+
+**[[⬆]](#TOC)**
 ## <a name='modules'>模块</a>
+从Lua 5.1开始，我们可以使用require和module函数来获取和创建Lua中的模块。从使用者的角度来看，一个模块就是一个程序库，可以通过require来加载，之后便得到一个类型为table的全局变量。此时的table就像名字空间一样，可以访问其中的函数和常量，如:
+
+	require "mod"
+	mod.foo()
+	local m2 = require "mod2"
+	local f = mod2.foo
+	f()
+
+### require 函数
+require函数的调用形式为require "模块名"。该调用会返回一个由模块函数组成的table，并且还会定义一个包含该table的全局变量。在使用Lua中的标准库时可以不用显示的调用require，因为Lua已经预先加载了他们。   
+
+ require函数在搜素加载模块时，有一套自定义的模式，如：
+    
+    ?;?.lua;c:/windows/?;/usr/local/lua/?/?.lua
+    在上面的模式中，只有问号(?)和分号(;)是模式字符，分别表示require函数的参数(模块名)和模式间的分隔符。如：调用require "sql"，将会打开以下的文件：
+    sql
+    sql.lua
+    c:/windows/sql
+    /usr/local/lua/sql/sql.lua
+
+Lua将`require`搜索的模式字符串放在变量`package.path`中。当Lua启动后，便以环境变量`LUA_PATH`的值来初始化这个变量。如果没有找到该环境变量，则使用一个编译时定义的默认路径来初始化。如果`require`无法找到与模块名相符的Lua文件，就会找C程序库。C程序库的搜索模式存放在变量`package.cpath`中。而这个变量则是通过环境变量`LUA_CPATH`来初始化的。
+
+### 编写模块的基本方法
+见如下代码和关键性注释：
+
+	--将模块名设置为require的参数，这样今后重命名模块时，只需重命名文件名即可。
+	local modname = ...
+	local M = {}
+	_G[modname] = M
+	
+	M.i = {r = 0, i = 1}  --定义一个模块内的常量。
+	function M.new(r,i) return {r = r, i = i} end
+	function M.add(c1,c2) 
+	    return M.new(c1.r + c2.r,c1.i + c2.i)
+	end
+	
+	function M.sub(c1,c2)
+	    return M.new(c1.r - c2.r,c1.i - c2.i)
+	end
+	--返回和模块对应的table。
+	return M
+
+### 使用环境
+
+仔细阅读上例中的代码，我们可以发现一些细节上问题。比如模块内函数之间的调用仍然要保留模块名的限定符，如果是私有变量还需要加local关键字，同时不能加模块名限定符。如果需要将私有改为公有，或者反之，都需要一定的修改。那又该如何规避这些问题呢？我们可以通过Lua的函数“全局环境”来有效的解决这些问题。见如下修改的代码和关键性注释：
+
+	--模块设置和初始化。这一点和上例一致。
+	local modname = ...
+	local M = {}
+	_G[modname] = M
+	
+	--声明这个模块将会用到的全局函数，因为在setfenv之后将无法再访问他们，
+	--因此需要在设置之前先用本地变量获取。
+	local sqrt = mat.sqrt
+	local io = io
+	
+	--在这句话之后就不再需要外部访问了。
+	setfenv(1,M)
+	
+	--后面的函数和常量定义都无需模块限定符了。
+	i = {r = 0, i = 1}
+	function new(r,i) return {r = r, i = i} end
+	function add(c1,c2) 
+	    return new(c1.r + c2.r,c1.i + c2.i)
+	end
+	 
+	function sub(c1,c2)
+	    return new(c1.r - c2.r,c1.i - c2.i)
+	end
+	--返回和模块对应的table。
+	return M
+
+### module函数
+
+在Lua 5.1中，我们可以用module(...)函数来代替以下代码，如：
+
+	local modname = ...
+	local M = {}
+	_G[modname] = M
+	package.loaded[modname] = M
+	    --[[
+	    和普通Lua程序块一样声明外部函数。
+	    --]]
+	setfenv(1,M)
+
+由于在默认情况下，module不提供外部访问，必须在调用它之前，为需要访问的外部函数或模块声明适当的局部变量。然后Lua提供了一种更为方便的实现方式，即在调用module函数时，多传入一个package.seeall的参数，如：
+
+    module(...,package.seeall)
+
+> 注意，Lua5.2版本以后，不支持module函数了，官方推荐自己构造一套require/module机制。
+
+
+**[[⬆]](#TOC)**
 ## <a name='references'>参考</a>
+1. 《Programming in Lua》  
+1. 《Lua中文教程》  
+1. 《The Implementation of Lua 5.0》
+1. 《Lua参考手册》
+1. 《Lua快速入门》
