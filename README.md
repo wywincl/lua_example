@@ -547,6 +547,102 @@ Lua应该说，是一种原型语言。原型是一种常规的对象，当其�
     -- B ctor b
     -- 1  2  3
 
+### 对象构造实例
+
+下面我们根据上面的介绍，来构造一个Set集合类，这个类，提供了集合的一些操作，如合集，插入，输出等。
+
+首先需要构造一个类的构造器，元类，也就是所有类的父类。  
+文件 `object.lua`
+
+	--[[
+    -- object.lua
+	-- This is object class 
+	]]--
+	
+	module(..., package.seeall)
+	
+	function class(classname, super)
+		local cls = {}
+		if super then 
+			cls = {}
+			for k, v in pairs(super) do cls[k] = v end
+			cls.super = super
+		else 
+			cls = {ctor = function () end}
+		end
+		
+		cls.__cname = classname
+		cls.__index = cls
+		
+		function cls.new(...)
+			local instance = setmetatable({}, cls)
+			local function create(c, ...)
+				if c.super then 
+					create(c.super, ...)
+				end
+				if c.ctor then
+					c.ctor(instance, ...)
+				end
+			end
+			create(instance, ...)
+			instance.class =cls 
+			return instance
+		end
+		
+		return cls
+	end
+
+然后，我们用类的构造器，来生成我们需要的具体类，这里我们生成一个集合类Set. 
+如`Set.lua`
+
+	--[[
+	-- Set.lua
+	-- Set class for lua
+	]]--
+	
+	module("Set", package.seeall)
+	
+	local class = require "object".class
+	
+	Set = class("Set", nil)
+	
+	metatable = {}
+	function Set:ctor(l)
+		self.__set = setmetatable({}, metatable)
+		for _, v in ipairs(l) do
+			self:insert(v)
+		end
+	end
+	
+	function Set:insert(i)
+		self.__set[i] = true
+	end
+	
+	function Set:show()
+		for i, _v in pairs(self.__set) do
+			print(i)
+		end
+	end
+    ...
+
+下面我们写一个例子，来测试一下Set集合。
+例 `testSet.lua`
+
+	--[[
+    -- testSet.lua
+    ]]--
+    
+	local Set = require("Set").Set
+	
+	s = Set.new({1, 2, 3})  -- 构造一个Set类的实例
+	 
+	s:insert(4) -- 实例插入一个元素
+	s:insert(5) -- 实例插入一个元素
+	
+	s:show()  -- 输出集合实例的所有元素
+    ...
+
+通过上面的例子，我们应该对Lua面向对象编程有了进一步的认识。
 
 **[[⬆]](#TOC)**
 ## <a name='modules'>模块</a>
@@ -684,6 +780,168 @@ Lua应该说，是一种原型语言。原型是一种常规的对象，当其�
     module(...,package.seeall)
 
 > 注意，Lua5.2版本以后，不支持module函数了，官方推荐自己构造一套require/module机制。
+
+
+### 模块构造实例
+
+下面我们给出一个模块的构造实例，说明如何构造模块和调用模块。这里我们构造一个Set集合，
+这个集合提供了相关的操作接口，如合集，并集，差集等。
+如下代码是`set.lua`.
+
+	-- @module set
+	
+	module ("set", package.seeall)
+	
+	
+	-- Primitive methods (know about representation)
+	
+	-- The representation is a table whose tags are the elements, and
+	-- whose values are true.
+	
+	-- @func member: Say whether an element is in a set
+	--   @param s: set
+	--   @param e: element
+	-- @returns
+	--   @param f: true if e is in set, false otherwise
+	function member (s, e)
+	  return s[e] == true
+	end
+	
+	-- @func insert: Insert an element to a set
+	--   @param s: set
+	--   @param e: element
+	function insert (s, e)
+	  s[e] = true
+	end
+	
+	-- @func new: Make a list into a set
+	--   @param l: list
+	-- @returns
+	--   @param s: set
+	metatable = {}
+	function new (l)
+	  local s = setmetatable ({}, metatable)
+	  for _, e in ipairs (l) do
+	    insert (s, e)
+	  end
+	  return s
+	end
+	
+	-- @func elements: Iterator for sets
+	-- TODO: Make the iterator return only the key
+	elements = pairs
+	
+	
+	-- High level methods (representation unknown)
+	
+	-- @func difference: Find the difference of two sets
+	--   @param s, t: sets
+	-- @returns
+	--   @param r: s with elements of t removed
+	function difference (s, t)
+	  local r = new {}
+	  for e in elements (s) do
+	    if not member (t, e) then
+	      insert (r, e)
+	    end
+	  end
+	  return r
+	end
+	
+	-- @func difference: Find the symmetric difference of two sets
+	--   @param s, t: sets
+	-- @returns
+	--   @param r: elements of s and t that are in s or t but not both
+	function symmetric_difference (s, t)
+	  return difference (union (s, t), intersection (t, s))
+	end
+	
+	-- @func intersection: Find the intersection of two sets
+	--   @param s, t: sets
+	-- @returns
+	--   @param r: set intersection of s and t
+	function intersection (s, t)
+	  local r = new {}
+	  for e in elements (s) do
+	    if member (t, e) then
+	      insert (r, e)
+	    end
+	  end
+	  return r
+	end
+	
+	-- @func union: Find the union of two sets
+	--   @param s, t: sets
+	-- @returns
+	--   @param r: set union of s and t
+	function union (s, t)
+	  local r = new {}
+	  for e in elements (s) do
+	    insert (r, e)
+	  end
+	  for e in elements (t) do
+	    insert (r, e)
+	  end
+	  return r
+	end
+	
+	-- @func subset: Find whether one set is a subset of another
+	--   @param s, t: sets
+	-- @returns
+	--   @param r: true if s is a subset of t, false otherwise
+	function subset (s, t)
+	  for e in elements (s) do
+	    if not member (t, e) then
+	      return false
+	    end
+	  end
+	  return true
+	end
+	
+	-- @func propersubset: Find whether one set is a proper subset of
+	-- another
+	--   @param s, t: sets
+	-- @returns
+	--   @param r: true if s is a proper subset of t, false otherwise
+	function propersubset (s, t)
+	  return subset (s, t) and not subset (t, s)
+	end
+	
+	-- @func equal: Find whether two sets are equal
+	--   @param s, t: sets
+	-- @returns
+	--   @param r: true if sets are equal, false otherwise
+	function equal (s, t)
+	  return subset (s, t) and subset (t, s)
+	end
+	
+	-- @head Metamethods for sets
+	-- set + table = union
+	metatable.__add = union
+	-- set - table = set difference
+	metatable.__sub = difference
+	-- set * table = intersection
+	metatable.__mul = intersection
+	-- set / table = symmetric difference
+	metatable.__div = symmetric_difference
+	-- set <= table = subset
+	metatable.__le = subset
+	-- set < table = proper subset
+	metatable.__lt = propersubset
+
+
+我们编写一个用例`testset.lua`。
+
+	require "set"
+	
+	s = set.new({1, 2, 3})	-- 创建一个集合，并初始化为{1，2, 3}
+	s2 = set.new({3,4,5,6,2}) -- 创建一个集合
+	
+	s3 = set.union(s, s2) -- 两个集合求合集, 这里可以直接写 s3 = s + s2
+	set.insert(s3, 11) -- 集合中插入一个元素
+	
+	for k,_ in pairs(s3) do print(k) end -- 打印集合中的所有元素
+
 
 **[[⬆]](#TOC)**
 ## <a name='coroutines'>协程</a>
