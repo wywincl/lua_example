@@ -130,7 +130,7 @@ Lua语法是非常简单的，关键字也不多，在这里需要注意：**关
 >变量名可以由任意字母、数字和下划线构成，但是不能以数字开头。在Lua中还有一个特殊的规则，即以下划线(__)开头，后面紧随多个大写字母(_VERSION)，这些变量一般被Lua保留并用于特殊用途，因此我们在声明变量时需要尽量避免这样的声明方式，以免给后期的维护带来不必要的麻烦。
 
 ### 全局变量_G
-在Lua脚本中，Lua将所有的全局变量保存在一个常规的table中，这个table被称为全局环境，并且将这个table保存在一个全局变量_G中，也就是说在脚本中可以用_G获取这个全局table，并且有_G._G == _G，在默认情况，Lua在全局环境_G中添加了标准库比如math、函数比如pairs等。
+在Lua脚本中，Lua将所有的全局变量保存在一个常规的table中，这个table被称为全局环境，并且将这个table保存在一个全局变量`_G`中，也就是说在脚本中可以用`_G`获取这个全局table，并且有`_G._G == _G`，在默认情况，Lua在全局环境`_G`中添加了标准库比如math、函数比如pairs等。
 
 **[[⬆]](#TOC)**
 ## <a name='control_statement'>控制语句</a>
@@ -261,7 +261,7 @@ Lua中，函数可以返回多个值，这点和python相似，但是python实�
 在python中，函数可以带有命名参数。如`rename(oldname=newname, oldage=newage)`
 这样，在传入参数的时候，可以不用考虑参数的顺序。  
 在Lua中，我们不可以直接这样使用，但是我们可以通过表来传递命名参数，这里Lua函数有个特性  
-对于参数为字符串常量或者表时，可以不用写()，直接 · 
+对于参数为字符串常量或者表时，可以不用写()，直接调用，如`print{1,2}, print"Hello world"`。 
 
 ***
 ### 高阶函数
@@ -752,12 +752,12 @@ Lua应该说，是一种原型语言。原型是一种常规的对象，当其�
 **module(name [, ...])**  
 功能：建立一个模块。
 
-当package.loaded[name]中存在时，当中的表作为module；  
-当全局表`_G`中存在name指定的表时，此表作为module;  
-当以上两种情况都不存在表name时，将新建一个表，并使其作为全局名name的值，并且设置package.loaded[name],而且设置`t._NAME`为name,`t._M`为module,`t._PACKAGE`为包的全名， 最后把此module设t作为当前函数的新环境表和package.loaded[name]的新值。(也就是说，旧的环境表将不能访问，除非加上package.sellall参数外)
+当`package.loaded[name]`中存在时，当中的表作为`module`；  
+当全局表`_G`中存在name指定的表时，此表作为`module`;  
+当以上两种情况都不存在表name时，将新建一个表，并使其作为全局名name的值，并且设置`package.loaded[name]`,而且设置`t._NAME`为name,`t._M`为`module`,`t._PACKAGE`为包的全名， 最后把此`module`设t作为当前函数的新环境表和`package.loaded[name]`的新值。(也就是说，旧的环境表将不能访问，除非加上`package.sellall`参数外)
 
 **package.seeall(module)**  
-功能：为module设置一个元表，此元表的`__index`字段的值为全局环境表_G,所以此时module可以访问全局环境。
+功能：为module设置一个元表，此元表的`__index`字段的值为全局环境表`_G`,所以此时`module`可以访问全局环境。
   
 等效于：
 
